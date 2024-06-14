@@ -1,0 +1,417 @@
+---
+title: "R Notebook"
+output:
+  html_notebook: default
+  html_document:
+    df_print: paged
+  pdf_document: default
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r,eval=FALSE}
+#ouverture du fichier
+data=read.csv("dataR.csv",sep=",")
+```
+
+Fatma Bouchnag / Huan Jie Yen
+
+# SAé 2.03 - Régression sur données réelles
+
+Représentation graphique de la proportion de tumeurs malignes et de tumeurs bénigne:
+
+```{r}
+diagnosis_counts <- table(data$diagnosis)
+data$diagnosis <- factor(data$diagnosis, levels = c("B", "M"))
+barplot(diagnosis_counts, main = "Proportion de tumeurs malignes et de tumeurs bénignes", 
+        xlab = "Diagnostique", ylab = "Effectif", col = c(rgb(1, 0, 0, alpha = 0.3), rgb(0, 0, 1, alpha = 0.3)))
+
+
+legend("topright", legend = c("Malignes", "Benignes"), fill = c(rgb(1, 0, 0, alpha = 0.3),rgb(0, 0, 1, alpha = 0.3)))
+
+text(x = 1:length(diagnosis_counts), y = 1:length(diagnosis_counts), labels = diagnosis_counts, pos = 3)
+```
+
+Par observation de l'histogramme, nous avons un total de 357 tumeurs
+bénignes et 212 tumeurs malignes.
+
+Nous avons donc ici, une proportion de tumeurs malignes plus importantes
+que les tumeurs bénignes.
+
+2.  Représentation et analyse de l'histogramme du rayon (radius_mean)
+
+```{r}
+hist(data$radius_mean,
+     main = "Histogramme des moyennes de rayons des cellules",
+     xlab = "Moyenne de rayon",
+     ylab = "Fréquences",
+     col = rgb(0.3, 0, 0.8, alpha = 0.3),
+     border = "black")
+
+```
+
+On remarque dans l'histogramme, une centré entre les rayons moyen de 10
+et 15 pour des fréquences d'observation supérieures à 100. Ainsi, la
+plupart des cellules observées, bénignes ou malignes, sont dans ces
+intervalles-ci.
+
+3.Histogramme du rayon (radius_mean) différenciant les tumeurs malignes (M) et des bénignes (B):
+
+```{r}
+# Filtrer les données pour les tumeurs malignes (M)
+
+hist(data$radius_mean[data$diagnosis == "M"],
+     main = "Histogramme du rayon des cellules",
+     xlab = "Moyenne de rayon",
+     ylab = "Fréquence",
+     col = rgb(1, 0, 0, alpha = 0.3),
+     border = "black",
+     add = FALSE)  # Ajouter le premier histogramme
+
+# Filtrer les données pour les tumeurs bénignes (B)
+hist(data$radius_mean[data$diagnosis == "B"],
+     col = rgb(0, 0, 1, alpha = 0.3),
+     border = "black",
+     add = TRUE)  # Ajouter le deuxième histogramme
+
+#légende
+legend("topright", legend = c("Malignes", "Benignes"), 
+       fill = c(rgb(1, 0, 0, alpha = 0.3), rgb(0, 0, 1, alpha = 0.3)))
+
+```
+
+Dans cet histogramme, les tumeurs bénignes (bleues) sont différenciées
+des tumeurs malignes (rouges).
+
+On s'apperçoit que les tumeurs bénignes sont pour la plupart inférieures
+au rayon moyen de 15 tandis que les tumeurs malignes sont centrés entre
+les rayons moyens de 15 et 20.
+
+On en déduit donc que les tumeurs malignes sont repérables de part leur
+moyenne de rayon comprise entre 15 et 20.
+
+On peut également supposer que la variable du rayon est une variable
+discriminante puisqu'elle nous permets de différencier les tumeurs
+bénignes aux tumeurs malignes.
+
+4.  Effectuer la même opération que précédemment pour les dix variables
+    statistiques, en positionnant les histogrammes sur deux colonnes et
+    cinq lignes:
+
+```{r}
+#les colonnes pertinentes pour les histogrammes
+selected_cols <- c("radius_mean", "texture_mean", "perimeter_mean", "area_mean", "smoothness_mean", "compactness_mean", "concavity_mean", "concave.points_mean", "symmetry_mean", "fractal_dimension_mean", "diagnosis")
+selected_data <- data[, selected_cols]
+
+#données en deux groupes : tumeurs malignes (M) et bénignes (B) en fonction de la colonne "diagnosis"
+malignes <- selected_data[selected_data$diagnosis == "M", ]
+benignes<- selected_data[selected_data$diagnosis == "B", ]
+
+#fonction par() pour spécifier la disposition des sous-graphiques. Utilisez la fonction hist() pour chaque variable en utilisant différentes couleurs pour les tumeurs malignes et bénignes.
+
+
+
+par(mfrow = c(5, 2))  # 5 lignes, 2 colonnes
+par(mar = c(2, 2, 2, 2))  # Réduire les marges intérieures
+par(oma = c(0, 0, 1.5, 0))  # Ajouter de l'espace en bas pour les titres
+
+for (i in 1:10) {
+  hist(malignes[, i], col = rgb(1, 0, 0, alpha = 0.3), main = colnames(malignes)[i], add = FALSE)
+  hist(benignes[, i], col = rgb(0, 0, 1, alpha = 0.3), main = colnames(benignes)[i], add = TRUE)
+}
+
+
+legend("topright", legend = c("Malignes", "Benignes"), fill = c(rgb(1, 0, 0, alpha = 0.3), rgb(0, 0, 1, alpha = 0.3)))
+```
+
+Non supperposées, les tumeurs malignes sont représentées en rouge et les
+tumeurs bénines en bleues. L'affichage des histogrammes ci-dessous nous
+permets d'avoir une meilleure visualisation des répartitions de cellules
+bénignes et de cellules malignes en fonction des 10 variables suivants:
+
+-rayon moyen -texture moyen -périmètre moyen -aire moyen -finesse
+moyenne -compacité moyenne -concavité moyenne -points concaves moyen
+-symétrie moyenne -dimension fractale
+
+5.A partir de la figure précédente et d'une analyse argumentée, en
+déduire quelles variables pourraient, a priori, être discriminantes pour
+déterminer l'état de la tumeur.
+
+Dans un premier temps, nous allons analyser la dispersion des barres
+pour chaque diagnostique (Bénin ou Malin). Si la différence de
+dispertion est grande, on peut supposer que la variable nous permets de
+déterminer le diagnostique.
+
+Par interprétation graphique, on remarque que pour la variable de
+l'aire, les tumeurs malignes ont tendances à avoir une aire supérieure à
+600. Par ailleurs, les tumeurs bénignes ont tendances à avoir une aire
+inférieure à 600. Cette dispersion notable nous permets d'en déduire que
+la variable de l'aire est une variable discriminante.
+
+On note également que le périmètre d'une cellule étant maligne a
+tendance à être supérieur à 100, à l'inverse des tumeurs bénignes, ou
+nous voyons qu'elles sont généralement inférieures à 100. Cette
+différence nous permets également de déduire que la variable du
+périmètre est une variable discriminante.
+
+On raisonne de la même manière et nous avons donc pour variables
+discriminantes, le rayon, la texture, la compacité, la concavité et
+l'aire.
+
+
+
+6) Le nuage de points relatif à la texture en fonction du rayon,
+en utilisant deux couleurs différentes pour distinguer les tumeurs
+malignes (M) et bénignes (B):
+
+```{r}
+selected_data <- data[, c("radius_mean", "diagnosis", "texture_mean")]
+malignant_data <- selected_data[selected_data$diagnosis == "M", ]
+benign_data <- selected_data[selected_data$diagnosis == "B", ]
+
+plot(malignant_data$radius_mean, malignant_data$texture_mean, col = rgb(1, 0, 0, alpha = 0.3), xlab = "Rayon", ylab = "Texture")
+points(benign_data$radius_mean, benign_data$texture_mean, col = rgb(0, 0, 1, alpha = 0.3))
+
+# Légende
+legend("topright", legend = c("Malignes", "Bénignes"), fill = c(rgb(1, 0, 0, alpha = 0.3), rgb(0, 0, 1, alpha = 0.3)))
+
+```
+
+Le nuage de points est constitué de deux types de points : rouge et
+bleu. Les points rouges représentent les tumeurs malignes, tandis que
+les points bleus représentent les tumeurs bénignes. L'axe des y
+représente la texture des tumeurs. L'axe des x représente le rayon des
+tumeurs.
+
+Par lecture graphique: Les points bleus, représentant les tumeurs
+bénignes, sont centrés dans un intervalle inférieur à 15 pour le rayon.
+Cette observation suggère une corrélation entre les tumeurs bénignes et
+des rayons plus faibles.
+
+Les points rouges, représentant les tumeurs malignes, se dispersent à
+partir d'un rayon de 15. Cela indique une corrélation entre les tumeurs
+malignes et des rayons plus élevés. La dispersion des points rouges
+suggère qu'il existe une plus grande variabilité de tailles de tumeurs
+malignes dans l'échantillon.
+
+Une corrélation significative est observée entre les types de tumeurs
+(bénignes/malignes) et le rayon des tumeurs. Les tumeurs bénignes ont
+tendance à avoir des rayons plus faibles et à se regrouper, tandis que
+les tumeurs malignes présentent une plus grande variabilité de tailles.
+
+L'analyse du nuage de points révèle également qu'il n'y a pas de
+corrélation évidente entre la texture des tumeurs et leur rayon.
+
+Pour évaluer la pertinence de cette affirmation, nous pouvons procéder à
+un calcul de Pearson:
+
+```{r}
+X <- data[, c("radius_mean")]
+Y <- data[, c("texture_mean")]
+
+cor(X,Y)
+```
+
+Avec un résultat de Pearson 0.3, on estime la valeur trop faible pour
+affirmer une quelconque corrélation.
+
+
+Cette section permet de répondre à la question 7 ainsi qu'à la partie 2 de la sae "mise en évidences de liaison entres varaiables" 
+
+Voici les variables isolées précédemment : 
+le rayon, la texture, la compacité, la concavité, l’aire, les points concaves et le périmètre
+
+Lors de l'analyse de grandes quantités de données, il est utile de réduire le nombre de variables à considérer. La matrice de corrélation permet d'identifier les variables qui sont fortement corrélées les unes aux autres. Dans ce cas, il est possible de choisir une seule variable représentative d'un groupe de variables fortement corrélées.
+
+En effet, lorsqu'il y a une forte corrélation entre deux variables, cela signifie qu'elles sont très similaires dans leur comportement et qu'elles apportent essentiellement la même information à  l'analyse. Dans ce cas, on peut choisir de supprimer l'une des deux variables pour éviter la redondance.
+
+La matrice de corrélation ci-dessous: 
+
+```{r}
+selected_data <- data[, c("concave.points_mean", "radius_mean", "diagnosis", "texture_mean","perimeter_mean", "area_mean", "compactness_mean", "concavity_mean")]
+malignant_data <- selected_data[selected_data$diagnosis == "M", ]
+benign_data <- selected_data[selected_data$diagnosis == "B", ]
+
+```
+
+```{r}
+selected_data <- data[, c("concave.points_mean", "radius_mean", "texture_mean", "perimeter_mean", "area_mean", "compactness_mean", "concavity_mean")]
+correlation_matrix <- cor(selected_data)
+print(correlation_matrix)
+```
+
+D'après la matrice de corrélation, voici les paires de variables qui ont une corrélation élevée :
+
+concave.points_mean/radius_mean  0.8225285 
+concave.points_mean/perimeter_mean 0.8509770 
+concave.points_mean/area_mean 0.8232689
+concave.points_mean/compactness_mean 0.8311350
+concave.points_mean/concavity_mean  0.9213910
+
+radius_mean/perimeter_mean 0.9978553 
+radius_mean/area_mean 0.9873572
+
+perimeter_mean/ area_mean 0.9865068
+
+compactness_mean/concavity_mean 0.8831207
+
+
+Nous pouvons visualiser ces corrélations avec les nuages de points ci-dessous: 
+
+
+Points concave: 
+```{r}
+# Diviser la fenêtre graphique en 1 ligne et 1 colonne
+par(mfrow = c(1, 1))
+
+#on ajoute les plots
+
+# Création du graphique de dispersion
+plot(malignant_data$concave.points_mean, malignant_data$radius_mean, col = "red", xlab = "Points concave", ylab = "Rayon")
+points(benign_data$concave.points_mean, benign_data$radius_mean, col = "blue")
+
+# Ajustement linéaire des moindres carrés pour les tumeurs malignes
+model_malignant <- lm(radius_mean ~ concave.points_mean, data = malignant_data)
+abline(model_malignant, col = "red")
+
+# Ajustement linéaire des moindres carrés pour les tumeurs bénignes
+model_benign <- lm(radius_mean ~ concave.points_mean, data = benign_data)
+abline(model_benign, col = "blue")
+
+
+
+# Création du graphique de dispersion
+plot(malignant_data$concave.points_mean, malignant_data$perimeter_mean, col = "red", xlab = "Points concave", ylab = "Périmètre")
+points(benign_data$concave.points_mean, benign_data$perimeter_mean, col = "blue")
+
+# Ajustement linéaire des moindres carrés pour les tumeurs malignes
+model_malignant <- lm(perimeter_mean ~ concave.points_mean, data = malignant_data)
+abline(model_malignant, col = "red")
+
+# Ajustement linéaire des moindres carrés pour les tumeurs bénignes
+model_benign <- lm(perimeter_mean ~ concave.points_mean, data = benign_data)
+abline(model_benign, col = "blue")
+
+# Création du graphique de dispersion
+plot(malignant_data$concave.points_mean, malignant_data$area_mean, col = "red", xlab = "Points concave", ylab = "Aire")
+points(benign_data$concave.points_mean, benign_data$area_mean, col = "blue")
+
+# Ajustement linéaire des moindres carrés pour les tumeurs malignes
+model_malignant <- lm(area_mean ~ concave.points_mean, data = malignant_data)
+abline(model_malignant, col = "red")
+
+# Ajustement linéaire des moindres carrés pour les tumeurs bénignes
+model_benign <- lm(area_mean ~ concave.points_mean, data = benign_data)
+abline(model_benign, col = "blue")
+
+
+
+# Création du graphique de dispersion
+plot(malignant_data$concave.points_mean, malignant_data$compactness_mean, col = "red", xlab = "Points concave", ylab = "Compacité")
+points(benign_data$concave.points_mean, benign_data$compactness_mean, col = "blue")
+
+# Ajustement linéaire des moindres carrés pour les tumeurs malignes
+model_malignant <- lm(compactness_mean ~ concave.points_mean, data = malignant_data)
+abline(model_malignant, col = "red")
+
+# Ajustement linéaire des moindres carrés pour les tumeurs bénignes
+model_benign <- lm(compactness_mean ~ concave.points_mean, data = benign_data)
+abline(model_benign, col = "blue")
+
+
+
+# Création du graphique de dispersion
+plot(malignant_data$concave.points_mean, malignant_data$concavity_mean, col = "red", xlab = "Points concave", ylab = "Concavité")
+points(benign_data$concave.points_mean, benign_data$concavity_mean, col = "blue")
+
+# Ajustement linéaire des moindres carrés pour les tumeurs malignes
+model_malignant <- lm(concavity_mean ~ concave.points_mean, data = malignant_data)
+abline(model_malignant, col = "red")
+
+# Ajustement linéaire des moindres carrés pour les tumeurs bénignes
+model_benign <- lm(concavity_mean ~ concave.points_mean, data = benign_data)
+abline(model_benign, col = "blue")
+
+
+```
+La concavité et les points concaves étant deux variables très corrélées car très liées, nous opterons pour l'utilisation de la variable de concavité au détriment de la variable des points concaves.
+
+Rayon: 
+```{r}
+# Diviser la fenêtre graphique en 2 ligne et 2 colonnes
+par(mfrow = c(1, 2))
+
+# Création du graphique de dispersion
+plot(malignant_data$radius_mean, malignant_data$perimeter_mean, col = "red", xlab = "Rayon", ylab = "Périmètre")
+points(benign_data$radius_mean, benign_data$perimeter_mean, col = "blue")
+
+# Ajustement linéaire des moindres carrés pour les tumeurs malignes
+model_malignant <- lm(perimeter_mean ~ radius_mean, data = malignant_data)
+abline(model_malignant, col = "red")
+
+# Ajustement linéaire des moindres carrés pour les tumeurs bénignes
+model_benign <- lm(perimeter_mean ~ radius_mean, data = benign_data)
+abline(model_benign, col = "blue")
+
+
+# Création du graphique de dispersion
+plot(malignant_data$radius_mean, malignant_data$area_mean, col = "red", xlab = "Rayon", ylab = "Aire")
+points(benign_data$radius_mean, benign_data$area_mean, col = "blue")
+
+# Ajustement linéaire des moindres carrés pour les tumeurs malignes
+model_malignant <- lm(area_mean ~ radius_mean, data = malignant_data)
+
+# Ajustement linéaire des moindres carrés pour les tumeurs bénignes
+model_benign <- lm(area_mean ~ radius_mean, data = benign_data)
+
+# Ajout des droites de régression
+abline(model_malignant, col = "red")
+abline(model_benign, col = "blue")
+
+```
+
+Il est raisonnable de supposer qu'il existe une corrélation entre les variables du périmètre et du rayon. 
+En effet, le rayon d'un cercle est directement lié au périmètre, car le périmètre est proportionnel au rayon selon la formule mathématique 2πr.
+
+De même, il est attendu qu'il y ait une corrélation évidente entre le rayon et l'aire des cercles. 
+La connaissance du rayon seul est suffisante pour calculer l'aire d'un cercle.
+
+Lors de l'analyse de données impliquant le rayon et l'aire de cercles, il peut être redondant ou superflu de conserver toutes les variables de ces modèles. 
+Il est donc possible de supprimer l'une des variables sans perdre beaucoup d'informations, car elles fournissent essentiellement la même information de base.
+
+De ce fait, nous garderons le rayon. 
+
+
+
+Compacité:
+```{r}
+# Création du graphique de dispersion
+plot(malignant_data$compactness_mean, malignant_data$concavity_mean, col = "red", xlab = "Compacité", ylab = "Concavité")
+points(benign_data$compactness_mean, benign_data$concavity_mean, col = "blue")
+
+# Ajustement linéaire des moindres carrés pour les tumeurs malignes
+model_malignant <- lm(concavity_mean ~ compactness_mean, data = malignant_data)
+abline(model_malignant, col = "red")
+
+# Ajustement linéaire des moindres carrés pour les tumeurs bénignes
+model_benign <- lm(concavity_mean ~ compactness_mean, data = benign_data)
+abline(model_benign, col = "blue")
+
+```
+L'ajustement linéaire pour les tumeurs bénignes montre une tendance générale où les points sont regroupés vers la gauche de la droite. Cela suggère une relation positive entre la compacité et la concavité pour les tumeurs bénignes. En d'autres termes, à mesure que la compacité augmente, la concavité tend également à augmenter pour les tumeurs bénignes. Le regroupement des points vers la gauche indique une faible variabilité dans cette relation, ce qui implique que les tumeurs bénignes ont tendance à présenter des valeurs de compacité et de concavité relativement faibles et similaires.
+
+L'ajustement linéaire pour les tumeurs malignes montre également une tendance générale dans la relation entre la compacité et la concavité. Les points rouges se dispersent le long de cette droite, indiquant une corrélation positive entre la compacité et la concavité chez les tumeurs malignes. Cela implique que, en général, les tumeurs malignes ont tendance à avoir à la fois une compacité et une concavité plus élevées par rapport aux tumeurs bénignes. Comme pour les tumeurs bénignes, la dispersion importante des points vers la fin de la droite indique une variabilité significative dans cette relation pour les tumeurs malignes.
+
+La corrélation de Pearson de 0.8831207 suggère une corrélation forte et positive entre la compacité et la concavité dans l'ensemble de données comprenant à la fois les tumeurs bénignes et malignes. Cependant, la dispersion importante des points vers la fin de l'ajustement linéaire des tumeurs malignes indique qu'il existe une variabilité importante dans cette relation, même avec une corrélation élevée.
+
+
+Bien qu'elles soient corrélés, la compacité et la concavité n'apportent toutes les deux pas la même information, à l'inverse du rayon, du périmètre et de l'aire. 
+Ainsi, il est préférable de les garder. 
+
+En conclusion, les deux variables les plus discrimantes sont le rayons et la concavité. Grâce à elles, nous pouvons discriminer les tumeurs malignes des tumeurs bénines. 
+
+
+
+
+
